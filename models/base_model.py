@@ -41,7 +41,7 @@ class BaseModel(ABC):
         self.visual_names = []
         self.optimizers = []
         self.image_paths = []
-        self.metric = 0  # used for learning rate policy 'plateau'
+        self.metric = None # used for learning rate policy 'plateau'
 
     @staticmethod
     def modify_commandline_options(parser, is_train):
@@ -86,6 +86,12 @@ class BaseModel(ABC):
         if not self.isTrain or opt.continue_train:
             load_suffix = 'iter_%d' % opt.load_iter if opt.load_iter > 0 else opt.epoch
             self.load_networks(load_suffix)
+        if opt.progressive_train:
+            self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
+            load_repo = os.path.join(opt.checkpoints_dir, opt.progressive_repo) 
+            load_start_layer = opt.progressive_layer
+            load_epoch = opt.progressive_epoch
+            self.load_partial_networks(load_repo, load_epoch, load_start_layer)
         self.print_networks(opt.verbose)
 
     def eval(self):
@@ -116,11 +122,7 @@ class BaseModel(ABC):
     def update_learning_rate(self):
         """Update learning rates for all the networks; called at the end of every epoch"""
         for scheduler in self.schedulers:
-            if self.opt.lr_policy == 'plateau':
-                scheduler.step(self.metric)
-            else:
-                scheduler.step()
-
+            scheduler.step(self.metric)
         lr = self.optimizers[0].param_groups[0]['lr']
         print('learning rate = %.7f' % lr)
 
@@ -196,6 +198,48 @@ class BaseModel(ABC):
                 for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
                     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
                 net.load_state_dict(state_dict)
+
+    #def load_partial_state_dict(self, state_dict):
+    #    own_state = self.state_dict()
+    #    for name, param in state_dict.items():
+    #        if name not in own_state:
+    #            continue
+    #        if isinstance(param, Parameter):
+    #            param = param.data
+    #        own_state[name].copy_(param)
+
+    def load_partial_networks(self, folder, epoch, start_layer):
+        """Load all the networks from the disk.
+
+        Parameters:
+            epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
+        """
+        for name in self.model_names:
+            if isinstance(name, str) and 'G' in name:
+                load_filename = '%s_net_%s.pth' % (epoch, name)
+                load_path = os.path.join(folder, load_filename)
+                net = getattr(self, 'net' + name)
+                if isinstance(net, torch.nn.DataParallel):
+                    net = net.module
+                net = net.state_dict()
+                print('loading the partial model from %s' % load_path)
+                # if you are using PyTorch newer than 0.4 (e.g., built from
+                # GitHub source), you can remove str() on self.device
+                state_dict = torch.load(load_path, map_location=str(self.device))
+                if hasattr(state_dict, '_metadata'):
+                    del state_dict._metadata
+
+                #dont understand
+                # patch InstanceNorm checkpoints prior to 0.4
+                #for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
+                #    self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+
+                for layer, param in state_dict.items():
+                    if 'up_sample' in layer or 'down_sample' in layer or 'resnet' in layer:
+                        if layer not in net:
+                            continue
+                        print('loading: ' + str(layer) + ' to net: ' + str(name) + ' succeeded ', param.size())
+                        net[layer].copy_(param)
 
     def print_networks(self, verbose):
         """Print the total number of parameters in the network and (if verbose) network architecture

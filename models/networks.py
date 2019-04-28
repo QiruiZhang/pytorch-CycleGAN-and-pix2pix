@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
+from collections import OrderedDict
 
 
 ###############################################################################
@@ -109,7 +110,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     return net
 
 
-def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
+def define_G(progressive_train, down_sample_nl, input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
     """Create a generator
 
     Parameters:
@@ -139,10 +140,14 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
-    if netG == 'resnet_9blocks':
-        net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
+    if netG == 'resnet_12blocks':
+        net = ResnetGenerator(down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=12)
+    elif netG == 'resnet_9blocks':
+        net = ResnetGenerator(progressive_train, down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
     elif netG == 'resnet_6blocks':
-        net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6)
+        net = ResnetGenerator(down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6)
+    elif netG == 'resnet_3blocks':
+        net = ResnetGenerator(down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=3)
     elif netG == 'unet_128':
         net = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'unet_256':
@@ -312,18 +317,19 @@ class ResnetGenerator(nn.Module):
     We adapt Torch code and idea from Justin Johnson's neural style transfer project(https://github.com/jcjohnson/fast-neural-style)
     """
 
-    def __init__(self, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, padding_type='reflect'):
+    def __init__(self, progressive_train, down_sample_nl, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, padding_type='reflect'):
         """Construct a Resnet-based generator
 
         Parameters:
             input_nc (int)      -- the number of channels in input images
             output_nc (int)     -- the number of channels in output images
-            ngf (int)           -- the number of filters in the last conv layer
+            ngf (int)           -- the number of filters in the last conv layer, first???
             norm_layer          -- normalization layer
             use_dropout (bool)  -- if use dropout layers
             n_blocks (int)      -- the number of ResNet blocks
             padding_type (str)  -- the name of padding layer in conv layers: reflect | replicate | zero
         """
+        self.progressive_train = progressive_train
         assert(n_blocks >= 0)
         super(ResnetGenerator, self).__init__()
         if type(norm_layer) == functools.partial:
@@ -331,40 +337,103 @@ class ResnetGenerator(nn.Module):
         else:
             use_bias = norm_layer == nn.InstanceNorm2d
 
-        model = [nn.ReflectionPad2d(3),
-                 nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
-                 norm_layer(ngf),
-                 nn.ReLU(True)]
+        model_G2F = OrderedDict()
+        model = OrderedDict()
+        model_ch2rgb = OrderedDict()
+        model_G2R = OrderedDict()
+        model_G2B = OrderedDict()
+        
+        model_G2F['rgb2channel_pad'] = nn.ReflectionPad2d(3)
+        model_G2F['rgb2channel_conv'] = nn.Conv2d(input_nc, int(ngf/2), kernel_size=7, padding=0, bias=use_bias)
+        model_G2F['rgb2channel_norm'] = norm_layer(int(ngf/2))
+        model_G2F['rgb2channel_relu'] = nn.ReLU(True)
+        model_G2F['G2F_ds_conv'] = nn.Conv2d(int(ngf/2), ngf, kernel_size=3, padding=1, stride=2,bias=use_bias)
+        model_G2F['G2F_ds_norm'] = norm_layer(ngf)
+        model_G2F['G2F_ds_relu'] = nn.ReLU(True)
+        #model = [nn.ReflectionPad2d(3),
+        #         nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias),
+        #         norm_layer(ngf),
+        #         nn.ReLU(True)]
+        model['rgb2channel_pad'] = nn.ReflectionPad2d(3)
+        model['rgb2channel_conv'] = nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0, bias=use_bias)
+        model['rgb2channel_norm'] = norm_layer(ngf)
+        model['rgb2channel_relu'] = nn.ReLU(True)
 
-        n_downsampling = 2
+        n_downsampling = down_sample_nl
         for i in range(n_downsampling):  # add downsampling layers
             mult = 2 ** i
-            model += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias),
-                      norm_layer(ngf * mult * 2),
-                      nn.ReLU(True)]
+            #original
+            model[str('down_sample_conv_' + str(n_downsampling - i - 1))] = nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias)
+            model[str('down_sample_norm_' + str(n_downsampling - i - 1))] = norm_layer(ngf * mult * 2)
+            model[str('down_sample_relu_' + str(n_downsampling - i - 1))] = nn.ReLU(True)
+            #model += [nn.Conv2d(ngf * mult, ngf * mult * 2, kernel_size=3, stride=2, padding=1, bias=use_bias),
+            #          norm_layer(ngf * mult * 2),
+            #          nn.ReLU(True)]
 
         mult = 2 ** n_downsampling
-        for i in range(n_blocks):       # add ResNet blocks
 
-            model += [ResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)]
+        for i in range(n_blocks):       # add ResNet blocks
+            model[str('resnet_' + str(i))] = ResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)
+            #model += [ResnetBlock(ngf * mult, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)]
 
         for i in range(n_downsampling):  # add upsampling layers
             mult = 2 ** (n_downsampling - i)
-            model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
-                                         kernel_size=3, stride=2,
-                                         padding=1, output_padding=1,
-                                         bias=use_bias),
-                      norm_layer(int(ngf * mult / 2)),
-                      nn.ReLU(True)]
-        model += [nn.ReflectionPad2d(3)]
-        model += [nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
-        model += [nn.Tanh()]
+            model[str('up_sample_conv_' + str(i))] = nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2), kernel_size=3, stride=2, padding=1, output_padding=1, bias=use_bias)
+            model[str('up_sample_norm_' + str(i))] = norm_layer(int(ngf * mult / 2))
+            model[str('up_sample_relu_' + str(i))] = nn.ReLU(True)
+            #model += [nn.ConvTranspose2d(ngf * mult, int(ngf * mult / 2),
+            #                             kernel_size=3, stride=2,
+            #                             padding=1, output_padding=1,
+            #                             bias=use_bias),
+            #          norm_layer(int(ngf * mult / 2)),
+            #          nn.ReLU(True)]
+        
+        model_ch2rgb['ch2rgb_pad'] = nn.ReflectionPad2d(3)
+        model_ch2rgb['ch2rgb_conv'] = nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0, bias=use_bias)
+        model_ch2rgb['ch2rgb_tanh'] = nn.Tanh()
 
-        self.model = nn.Sequential(*model)
-
+        model_G2R['G2R_1'] = ResnetBlock(ngf, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)
+        model_G2R['G2R_2'] = ResnetBlock(ngf, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)
+        model_G2R['G2R_3'] = ResnetBlock(ngf, padding_type=padding_type, norm_layer=norm_layer, use_dropout=use_dropout, use_bias=use_bias)
+        
+        model_G2B['G2B_us_conv'] = nn.ConvTranspose2d(ngf, int(ngf/2), kernel_size=3, padding=1, stride=2, output_padding=1, bias=use_bias)
+        model_G2B['G2B_us_norm'] = norm_layer(int(ngf/2))
+        model_G2B['G2B_us_relu'] = nn.ReLU(True)
+        
+        model_G2B['channel2rgb_pad'] = nn.ReflectionPad2d(3)
+        model_G2B['channel2rgb_conv'] = nn.Conv2d(int(ngf/2), output_nc, kernel_size=7, padding=0)
+        model_G2B['channel2rgb_tanh'] = nn.Tanh()
+        #model['channle2rgb_pad'] += [nn.ReflectionPad2d(3)]
+        #model += [nn.Conv2d(ngf, output_nc, kernel_size=7, padding=0)]
+        #model += [nn.Tanh()]
+        
+        #self.model = nn.Sequential(*model)
+        self.model_G2F = nn.Sequential(model_G2F)
+        self.model = nn.Sequential(model)
+        self.model_ch2rgb = nn.Sequential(model_ch2rgb)
+        self.model_G2R = nn.Sequential(model_G2R)
+        self.model_G2B = nn.Sequential(model_G2B)
+        
     def forward(self, input):
         """Standard forward"""
-        return self.model(input)
+        if (self.progressive_train):
+            G2F_out = self.model_G2F(input)
+            #print('G2F size: ', G2F_out.size())
+            input_ds2 = nn.functional.interpolate(input,size=(128,128))
+            #print('input ds2 size: ', input_ds2.size())
+            model_out = self.model(input_ds2)
+            #print('model_out size: ', model_out.size())
+            ResAdd = G2F_out + model_out
+            G2R_out = self.model_G2R(ResAdd)
+            #print('G2R size: ', G2R_out.size())
+            G2B_out = self.model_G2B(G2R_out)	
+            #print('G2B size: ', G2B_out.size())
+            return G2B_out
+        else:
+            #print(input.size())
+            model_out = self.model(input)
+            model_rgb = self.model_ch2rgb(model_out)
+            return model_rgb
 
 
 class ResnetBlock(nn.Module):
