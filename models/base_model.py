@@ -86,7 +86,7 @@ class BaseModel(ABC):
         if not self.isTrain or opt.continue_train:
             load_suffix = 'iter_%d' % opt.load_iter if opt.load_iter > 0 else opt.epoch
             self.load_networks(load_suffix)
-        if opt.progressive_train:
+        if opt.progressive_train and self.isTrain:
             self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
             load_repo = os.path.join(opt.checkpoints_dir, opt.progressive_repo) 
             load_start_layer = opt.progressive_layer
