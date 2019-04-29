@@ -35,10 +35,25 @@ if __name__ == '__main__':
     visualizer = Visualizer(opt)   # create a visualizer that display/save images and plots
     total_iters = 0                # the total number of training iterations
 
+    for param in model.netG_A.module.model.parameters():
+        #print(name)
+        param.requires_grad = False
+
+    for param in model.netG_B.module.model.parameters():
+        param.requires_grad = False
+
     for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):    # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()    # timer for data loading per iteration
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
+
+        if (epoch == opt.defreeze_epoch + opt.epoch_count):
+            print("Defreezed pretrained model !!!")
+            for param in model.netG_A.module.model.parameters():
+                param.requires_grad = True
+            
+            for param in model.netG_B.module.model.parameters():
+                param.requires_grad = True
 
         for i, data in enumerate(dataset):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
