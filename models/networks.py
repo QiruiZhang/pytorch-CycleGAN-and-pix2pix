@@ -110,7 +110,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     return net
 
 
-def define_G(progressive_train, down_sample_nl, input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
+def define_G(progressive_train, continue_train, down_sample_nl, input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
     """Create a generator
 
     Parameters:
@@ -143,7 +143,7 @@ def define_G(progressive_train, down_sample_nl, input_nc, output_nc, ngf, netG, 
     if netG == 'resnet_12blocks':
         net = ResnetGenerator(down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=12)
     elif netG == 'resnet_9blocks':
-        net = ResnetGenerator(progressive_train, down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
+        net = ResnetGenerator(progressive_train, continue_train, down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
     elif netG == 'resnet_6blocks':
         net = ResnetGenerator(down_sample_nl, input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6)
     elif netG == 'resnet_3blocks':
@@ -317,7 +317,7 @@ class ResnetGenerator(nn.Module):
     We adapt Torch code and idea from Justin Johnson's neural style transfer project(https://github.com/jcjohnson/fast-neural-style)
     """
 
-    def __init__(self, progressive_train, down_sample_nl, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, padding_type='reflect'):
+    def __init__(self, progressive_train, continue_train, down_sample_nl, input_nc, output_nc, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, padding_type='reflect'):
         """Construct a Resnet-based generator
 
         Parameters:
@@ -330,6 +330,7 @@ class ResnetGenerator(nn.Module):
             padding_type (str)  -- the name of padding layer in conv layers: reflect | replicate | zero
         """
         self.progressive_train = progressive_train
+        self.continue_train = continue_train
         assert(n_blocks >= 0)
         super(ResnetGenerator, self).__init__()
         if type(norm_layer) == functools.partial:
@@ -416,7 +417,7 @@ class ResnetGenerator(nn.Module):
         
     def forward(self, input):
         """Standard forward"""
-        if (self.progressive_train):
+        if (self.progressive_train or self.continue_train):
             G2F_out = self.model_G2F(input)
             #print('G2F size: ', G2F_out.size())
             input_ds2 = nn.functional.interpolate(input,size=(128,128))
