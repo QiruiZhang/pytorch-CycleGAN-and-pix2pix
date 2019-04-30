@@ -59,3 +59,4 @@ The trained models are in "checkpoints/city_XX_9layer_XX/".
 ./test_LE_9layer_city_large.sh
 ```
 The testing results are in "results/city_XX_9layer_XX/test_latest/images/".
+Use your browser to open "results/city_XX_9layer_XX/test_latest/index.html" to visualize all the testing results.
