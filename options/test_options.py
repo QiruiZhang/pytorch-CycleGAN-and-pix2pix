@@ -16,6 +16,8 @@ class TestOptions(BaseOptions):
         # Dropout and Batchnorm has different behavioir during training and test.
         parser.add_argument('--eval', action='store_true', help='use eval mode during test time.')
         parser.add_argument('--num_test', type=int, default=50, help='how many test images to run')
+	# dummy(useless) options for testing
+        parser.add_argument('--continue_train', action='store_true', help='continue training: load the latest model')
         parser.add_argument('--progressive_train', action='store_true', help='progressive training: load the smaller model')
         # rewrite devalue values
         parser.set_defaults(model='test')
