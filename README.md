@@ -37,22 +37,24 @@ git clone https://github.com/QiruiZhang/pytorch-PG-LE-CycleGAN.git
 ```bash
 ./run_LE_9layer_city_large.sh
 ```
+The trained models are in "checkpoints/city_XX_9layer_XX/".
 
-### 3. Run training scripts (Optional)
--Train the G1 part of the medium-sized model 
+### 4. Run testing scripts
+- Test the G1 part of the medium-sized model 
 ```bash
-./run_2x_9layer_city_medium.sh
+./test_2x_9layer_city_medium.sh
 ```
--Train the complete the medium-sized model with pre-trained G1
+- Test the complete the medium-sized model with pre-trained G1
 ```bash
-./run_LE_9layer_city_medium.sh
+./test_LE_9layer_city_medium.sh
 ```
 
--Train the G1 part of the large model 
+- Test the G1 part of the large model 
 ```bash
-./run_2x_9layer_city_large.sh
+./test_2x_9layer_city_large.sh
 ```
--Train the complete large model with pre-trained G1
+- Test the complete large model with pre-trained G1
 ```bash
-./run_LE_9layer_city_large.sh
+./test_LE_9layer_city_large.sh
 ```
+The testing results are in "results/city_XX_9layer_XX/test_latest/images/".
