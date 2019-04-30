@@ -8,18 +8,30 @@ To carry out our experiments on the original CycleGAN codes, we mainly modified 
 
 Extra to the report, we further experimented with a large model with progressive training local enhancement, which has a model architecture and size similar to the large baseline model mentioned in the report.
 
-## To run the code: 
+## Prerequisites
+- Linux or macOS
+- Python 3
+- CPU or NVIDIA GPU + CUDA CuDNN
+
+## To run the codes
 ### 1. Clone this repo
 ```bash
 git clone https://github.com/QiruiZhang/pytorch-PG-LE-CycleGAN.git
+cd pytorch-PG-LE-CycleGAN
 ```
 
+### 2. Installation
+- Install [PyTorch](http://pytorch.org and) 0.4+ and other dependencies (e.g., torchvision, [visdom](https://github.com/facebookresearch/visdom) and [dominate](https://github.com/Knio/dominate)).
+  - For pip users, please type the command `pip install -r requirements.txt`.
+  - For Conda users, please use the installation script `./scripts/conda_deps.sh`. Alternatively, you can create a new Conda environment using `conda env create -f environment.yml`.
+  
 ### 2. Download the Cityscapes Dataset
 ```bash
-./bash ./datasets/download_cyclegan_dataset.sh Cityscapes
+bash ./datasets/download_cyclegan_dataset.sh cityscapes
 ```
 
 ### 3. Run training scripts (Optional)
+As pretrained models are already stored in "checkpoints/city_XX_9layer_XX/", it is not recommended to train again, which will overwrite the pretrained models.
 - Train the G1 part of the medium-sized model 
 ```bash
 ./run_2x_9layer_city_medium.sh
@@ -58,3 +70,4 @@ The trained models are in "checkpoints/city_XX_9layer_XX/".
 ./test_LE_9layer_city_large.sh
 ```
 The testing results are in "results/city_XX_9layer_XX/test_latest/images/".
+Use your browser to open "results/city_XX_9layer_XX/test_latest/index.html" to visualize all the testing results.
