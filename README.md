@@ -16,7 +16,7 @@ git clone https://github.com/QiruiZhang/pytorch-PG-LE-CycleGAN.git
 
 ### 2. Download the Cityscapes Dataset
 ```bash
-./bash ./datasets/download_cyclegan_dataset.sh Cityscapes
+bash ./datasets/download_cyclegan_dataset.sh cityscapes
 ```
 
 ### 3. Run training scripts (Optional)
