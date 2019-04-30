@@ -23,9 +23,8 @@ cd pytorch-PG-LE-CycleGAN
 ### 2. Installation
 - Install [PyTorch](http://pytorch.org and) 0.4+ and other dependencies (e.g., torchvision, [visdom](https://github.com/facebookresearch/visdom) and [dominate](https://github.com/Knio/dominate)).
   - For pip users, please type the command `pip install -r requirements.txt`.
-  - For Conda users, we provide a installation script `./scripts/conda_deps.sh`. Alternatively, you can create a new Conda environment using `conda env create -f environment.yml`.
-  - For Docker users, we provide the pre-built Docker image and Dockerfile. Please refer to our [Docker](docs/docker.md) page.
-
+  - For Conda users, please use the installation script `./scripts/conda_deps.sh`. Alternatively, you can create a new Conda environment using `conda env create -f environment.yml`.
+  
 ### 2. Download the Cityscapes Dataset
 ```bash
 bash ./datasets/download_cyclegan_dataset.sh cityscapes
