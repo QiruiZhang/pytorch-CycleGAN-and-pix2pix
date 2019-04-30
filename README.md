@@ -20,6 +20,7 @@ git clone https://github.com/QiruiZhang/pytorch-PG-LE-CycleGAN.git
 ```
 
 ### 3. Run training scripts (Optional)
+As pretrained models are already stored in "checkpoints/city_XX_9layer_XX/", it is not suggested to train again, which will overwrite the pretrained models.
 - Train the G1 part of the medium-sized model 
 ```bash
 ./run_2x_9layer_city_medium.sh
