@@ -32,6 +32,9 @@ bash ./datasets/download_cyclegan_dataset.sh cityscapes
 
 ### 3. Run training scripts (Optional)
 As pretrained models are already stored in "checkpoints/city_XX_9layer_XX/", it is not recommended to train again, which will overwrite the pretrained models.
+
+- To view training results and loss plots, run `python -m visdom.server` and click the URL http://localhost:8097.
+
 - Train the G1 part of the medium-sized model 
 ```bash
 ./run_2x_9layer_city_medium.sh
