@@ -1,5 +1,3 @@
-<img src='results/city_LE_9layer_medium/selected/485_A_fake_A.png' align="left" width=384>
-
 <br><br><br>
 
 # Progressively-trained local-enhanced CycleGAN in PyTorch
