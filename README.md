@@ -44,7 +44,7 @@ As pretrained models are already stored in "checkpoints/city_XX_9layer_XX/", it 
 ./run_LE_9layer_city_medium.sh
 ```
 
-- Train the G1 part of the large model 
+- Train the <i>G<sub>1</sub></i> part of the large model 
 ```bash
 ./run_2x_9layer_city_large.sh
 ```
@@ -55,7 +55,7 @@ As pretrained models are already stored in "checkpoints/city_XX_9layer_XX/", it 
 The trained models are in "checkpoints/city_XX_9layer_XX/".
 
 ### 4. Run testing scripts
-- Test the G1 part of the medium-sized model 
+- Test the <i>G<sub>1</sub></i> part of the medium-sized model 
 ```bash
 ./test_2x_9layer_city_medium.sh
 ```
@@ -64,7 +64,7 @@ The trained models are in "checkpoints/city_XX_9layer_XX/".
 ./test_LE_9layer_city_medium.sh
 ```
 
-- Test the G1 part of the large model 
+- Test the <i>G<sub>1</sub></i> part of the large model 
 ```bash
 ./test_2x_9layer_city_large.sh
 ```
