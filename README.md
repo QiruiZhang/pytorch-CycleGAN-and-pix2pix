@@ -35,7 +35,7 @@ As pretrained models are already stored in "checkpoints/city_XX_9layer_XX/", it 
 
 - To view training results and loss plots, run `python -m visdom.server` and click the URL http://localhost:8097.
 
-- Train the G<sub>1</sub> part of the medium-sized model 
+- Train the <i>G<sub>1</sub></i> part of the medium-sized model 
 ```bash
 ./run_2x_9layer_city_medium.sh
 ```
